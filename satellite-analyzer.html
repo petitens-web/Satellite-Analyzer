@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SatOrbit — Satellite Orbit & Mission Analyzer</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#0a0e17;--surface:#111825;--card:#161e2e;
+  --accent:#00d4aa;--accent2:#0084ff;--warn:#ff6b35;--danger:#ff4d6d;
+  --text:#e8edf5;--muted:#6b7a99;
+  --border:rgba(255,255,255,0.07);--border2:rgba(0,212,170,0.25);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden;position:relative;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,212,170,0.035) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,170,0.035) 1px,transparent 1px);background-size:48px 48px;animation:gridMove 20s linear infinite;pointer-events:none;z-index:0;}
+@keyframes gridMove{0%{background-position:0 0;}100%{background-position:48px 48px;}}
+.orb{position:fixed;border-radius:50%;filter:blur(80px);pointer-events:none;}
+.orb1{width:420px;height:420px;background:rgba(0,212,170,0.1);top:-120px;right:-100px;animation:orbF 9s ease-in-out infinite;}
+.orb2{width:320px;height:320px;background:rgba(0,132,255,0.08);bottom:-80px;left:-80px;animation:orbF 7s ease-in-out infinite;animation-delay:-3s;}
+.orb3{width:200px;height:200px;background:rgba(255,107,53,0.06);top:50%;left:40%;animation:orbF 11s ease-in-out infinite;animation-delay:-6s;}
+@keyframes orbF{0%,100%{transform:translate(0,0);}50%{transform:translate(18px,18px);}}
+
+/* NAV */
+.top-bar{position:fixed;top:0;left:0;right:0;z-index:200;padding:0.9rem 2rem;display:flex;align-items:center;justify-content:space-between;background:rgba(10,14,23,0.88);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);}
+.top-logo{display:flex;align-items:center;gap:10px;cursor:pointer;}
+.logo-icon{width:34px;height:34px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-weight:800;font-size:0.75rem;color:#0a0e17;flex-shrink:0;}
+.logo-name{font-family:'Syne',sans-serif;font-weight:700;font-size:0.95rem;}
+.logo-name span{color:var(--accent);}
+.nav-links{display:flex;align-items:center;gap:4px;}
+.nav-btn{background:none;border:1px solid transparent;border-radius:8px;padding:6px 14px;color:var(--muted);font-family:'IBM Plex Sans',sans-serif;font-size:0.82rem;cursor:pointer;transition:all 0.2s;}
+.nav-btn:hover{color:var(--text);border-color:var(--border);}
+.nav-btn.active{color:var(--accent);border-color:var(--border2);background:rgba(0,212,170,0.06);}
+.live-ind{display:flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;font-size:0.62rem;color:var(--muted);}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
+
+/* SCREENS */
+.screen{position:relative;z-index:10;min-height:100vh;padding:7rem 1.5rem 3rem;display:none;flex-direction:column;align-items:center;justify-content:center;}
+.screen.active{display:flex;animation:scIn 0.55s cubic-bezier(0.22,1,0.36,1) both;}
+@keyframes scIn{from{opacity:0;transform:translateY(28px);}to{opacity:1;transform:translateY(0);}}
+
+/* ── HOME ── */
+.hero{max-width:780px;width:100%;text-align:center;}
+.hero-badge{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:0.62rem;color:var(--accent);background:rgba(0,212,170,0.08);border:1px solid rgba(0,212,170,0.2);padding:5px 14px;border-radius:20px;letter-spacing:0.14em;margin-bottom:1.6rem;text-transform:uppercase;}
+.hero-title{font-family:'Syne',sans-serif;font-weight:800;font-size:clamp(2.2rem,6vw,3.8rem);line-height:1.05;letter-spacing:-0.03em;margin-bottom:1rem;}
+.hero-title .hl{background:linear-gradient(130deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.hero-sub{font-size:1rem;color:var(--muted);max-width:500px;margin:0 auto 2.5rem;line-height:1.75;}
+.hero-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+.btn-primary{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,var(--accent),#00b890);color:#0a0e17;font-family:'Syne',sans-serif;font-weight:700;font-size:0.95rem;padding:13px 28px;border-radius:11px;border:none;cursor:pointer;box-shadow:0 4px 28px rgba(0,212,170,0.35);transition:all 0.25s;letter-spacing:0.02em;}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 40px rgba(0,212,170,0.45);}
+.btn-primary:active{transform:scale(0.98);}
+.btn-secondary{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,0.05);color:var(--text);font-family:'Syne',sans-serif;font-weight:600;font-size:0.95rem;padding:13px 28px;border-radius:11px;border:1px solid var(--border);cursor:pointer;transition:all 0.25s;}
+.btn-secondary:hover{background:rgba(255,255,255,0.09);border-color:rgba(255,255,255,0.15);transform:translateY(-2px);}
+
+/* orbit diagram */
+.od-wrap{margin:3.5rem auto 0;width:280px;height:280px;position:relative;}
+.od-ring{position:absolute;border-radius:50%;border:1px solid;top:50%;left:50%;transform:translate(-50%,-50%);}
+.od-r1{width:68px;height:68px;border-color:rgba(0,212,170,0.7);box-shadow:0 0 16px rgba(0,212,170,0.25);}
+.od-r2{width:130px;height:130px;border-color:rgba(0,132,255,0.4);}
+.od-r3{width:200px;height:200px;border-color:rgba(255,179,0,0.3);}
+.od-r4{width:268px;height:268px;border-color:rgba(255,107,53,0.15);border-style:dashed;}
+.od-earth{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:22px;height:22px;border-radius:50%;background:radial-gradient(circle at 40% 40%,#4fc3f7,#1565c0);box-shadow:0 0 20px rgba(21,101,192,0.7);}
+.sa{position:absolute;top:50%;left:50%;width:0;height:0;transform-origin:0 0;}
+.sa1{animation:spin 3.5s linear infinite;}
+.sa2{animation:spin 8s linear infinite;}
+.sa3{animation:spin 18s linear infinite;}
+@keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+.sdot{width:9px;height:9px;border-radius:50%;position:absolute;}
+.sa1 .sdot{top:-50px;left:-4.5px;background:var(--accent);box-shadow:0 0 10px var(--accent);}
+.sa2 .sdot{top:-72px;left:-4.5px;background:var(--accent2);box-shadow:0 0 10px var(--accent2);}
+.sa3 .sdot{top:-107px;left:-4.5px;background:#ffb300;box-shadow:0 0 10px #ffb300;}
+.od-lbl{position:absolute;font-family:'IBM Plex Mono',monospace;font-size:0.52rem;color:var(--muted);letter-spacing:0.06em;white-space:nowrap;}
+.ll1{left:calc(50% + 42px);top:calc(50% - 6px);}
+.ll2{left:calc(50% + 72px);top:calc(50% - 6px);}
+.ll3{left:calc(50% + 108px);top:calc(50% - 6px);}
+.ll4{left:calc(50% + 138px);top:calc(50% - 6px);}
+
+.home-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;max-width:780px;width:100%;margin-top:3rem;}
+@media(max-width:640px){.home-stats{grid-template-columns:1fr 1fr;}}
+.hstat{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:1.2rem 1.4rem;}
+.hstat-num{font-family:'Syne',sans-serif;font-weight:800;font-size:1.55rem;color:var(--accent);}
+.hstat-lbl{font-family:'IBM Plex Mono',monospace;font-size:0.58rem;color:var(--muted);margin-top:4px;text-transform:uppercase;letter-spacing:0.1em;}
+
+/* ── ABOUT ── */
+.about-wrap{max-width:820px;width:100%;}
+.page-hdr{margin-bottom:2.5rem;}
+.page-tag{font-family:'IBM Plex Mono',monospace;font-size:0.62rem;color:var(--accent);background:rgba(0,212,170,0.08);border:1px solid rgba(0,212,170,0.2);padding:4px 12px;border-radius:20px;letter-spacing:0.14em;text-transform:uppercase;display:inline-block;margin-bottom:1rem;}
+.page-title{font-family:'Syne',sans-serif;font-weight:800;font-size:clamp(1.8rem,4vw,2.8rem);letter-spacing:-0.02em;}
+.page-sub{font-size:0.92rem;color:var(--muted);margin-top:0.5rem;line-height:1.7;}
+
+.about-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;}
+@media(max-width:620px){.about-grid{grid-template-columns:1fr;}}
+.acard{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:1.6rem;}
+.acard.full{grid-column:1/-1;}
+.ac-icon{font-size:1.5rem;margin-bottom:0.8rem;}
+.ac-title{font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;margin-bottom:0.5rem;}
+.ac-text{font-size:0.8rem;color:var(--muted);line-height:1.7;}
+
+.otable{width:100%;border-collapse:collapse;font-size:0.78rem;}
+.otable th{font-family:'IBM Plex Mono',monospace;font-size:0.58rem;text-transform:uppercase;letter-spacing:0.1em;color:var(--muted);padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);}
+.otable td{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.04);vertical-align:top;line-height:1.5;color:var(--muted);}
+.otable td:first-child{font-family:'Syne',sans-serif;font-weight:700;color:var(--text);white-space:nowrap;}
+.otable tr:last-child td{border-bottom:none;}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-family:'IBM Plex Mono',monospace;font-size:0.58rem;letter-spacing:0.06em;}
+.bl{background:rgba(0,212,170,0.12);color:var(--accent);border:1px solid rgba(0,212,170,0.25);}
+.bm{background:rgba(0,132,255,0.12);color:var(--accent2);border:1px solid rgba(0,132,255,0.25);}
+.bg{background:rgba(255,179,0,0.12);color:#ffb300;border:1px solid rgba(255,179,0,0.25);}
+.bh{background:rgba(255,107,53,0.12);color:var(--warn);border:1px solid rgba(255,107,53,0.25);}
+
+/* ── ANALYZER ── */
+.az-wrap{max-width:940px;width:100%;}
+.az-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;align-items:start;}
+@media(max-width:720px){.az-grid{grid-template-columns:1fr;}}
+
+.panel{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.8rem;}
+.panel-title{font-family:'Syne',sans-serif;font-weight:700;font-size:1rem;margin-bottom:0.25rem;}
+.panel-sub{font-size:0.78rem;color:var(--muted);margin-bottom:1.6rem;line-height:1.5;}
+.field{margin-bottom:1.3rem;}
+.field label{display:block;font-family:'IBM Plex Mono',monospace;font-size:0.62rem;color:var(--muted);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.5rem;}
+input[type=number],select{width:100%;padding:11px 14px;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:'IBM Plex Sans',sans-serif;font-size:0.9rem;outline:none;transition:border-color 0.2s,box-shadow 0.2s;-webkit-appearance:none;appearance:none;}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%236b7a99' d='M5 6L0 0h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px;}
+select option{background:var(--card);}
+input:focus,select:focus{border-color:var(--accent);background:rgba(0,212,170,0.05);box-shadow:0 0 0 3px rgba(0,212,170,0.12);}
+input::placeholder{color:var(--muted);}
+
+.range-lbl{display:flex;justify-content:space-between;align-items:center;font-family:'IBM Plex Mono',monospace;font-size:0.62rem;color:var(--muted);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.6rem;}
+.range-lbl span:last-child{color:var(--accent);font-size:0.75rem;}
+input[type=range]{width:100%;-webkit-appearance:none;appearance:none;height:4px;border-radius:4px;outline:none;padding:0;border:none;box-shadow:none;background:linear-gradient(to right,var(--accent) var(--pct,1%),rgba(255,255,255,0.1) var(--pct,1%));}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 10px rgba(0,212,170,0.5);transition:transform 0.15s;}
+input[type=range]::-webkit-slider-thumb:hover{transform:scale(1.2);}
+.rticks{display:flex;justify-content:space-between;margin-top:5px;}
+.rticks span{font-family:'IBM Plex Mono',monospace;font-size:0.5rem;color:var(--muted);}
+
+.qbtns{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:0.8rem;}
+.qbtn{padding:4px 11px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:0.6rem;letter-spacing:0.06em;border:1px solid;cursor:pointer;transition:all 0.2s;}
+.ql{color:var(--accent);border-color:rgba(0,212,170,0.3);background:rgba(0,212,170,0.06);}
+.ql:hover{background:rgba(0,212,170,0.15);border-color:rgba(0,212,170,0.6);}
+.qm{color:var(--accent2);border-color:rgba(0,132,255,0.3);background:rgba(0,132,255,0.06);}
+.qm:hover{background:rgba(0,132,255,0.15);border-color:rgba(0,132,255,0.6);}
+.qg{color:#ffb300;border-color:rgba(255,179,0,0.3);background:rgba(255,179,0,0.06);}
+.qg:hover{background:rgba(255,179,0,0.15);border-color:rgba(255,179,0,0.6);}
+.qh{color:var(--warn);border-color:rgba(255,107,53,0.3);background:rgba(255,107,53,0.06);}
+.qh:hover{background:rgba(255,107,53,0.15);border-color:rgba(255,107,53,0.6);}
+
+.analyze-btn{width:100%;padding:13px;background:linear-gradient(135deg,var(--accent),#00b890);border:none;border-radius:10px;color:#0a0e17;font-family:'Syne',sans-serif;font-weight:700;font-size:0.95rem;cursor:pointer;transition:all 0.25s;box-shadow:0 4px 20px rgba(0,212,170,0.3);letter-spacing:0.03em;margin-top:0.4rem;}
+.analyze-btn:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,212,170,0.4);}
+.analyze-btn:active{transform:scale(0.98);}
+
+.result-panel{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:1.8rem;min-height:560px;display:flex;flex-direction:column;}
+.r-idle{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:12px;}
+.r-idle-icon{font-size:3rem;opacity:0.3;}
+.r-idle-txt{font-family:'IBM Plex Mono',monospace;font-size:0.7rem;color:var(--muted);letter-spacing:0.1em;line-height:1.9;}
+.r-out{display:none;flex-direction:column;gap:1rem;animation:fadeUp 0.5s ease both;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+
+.sbar{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;border:1px solid;}
+.ss{background:rgba(0,212,170,0.07);border-color:rgba(0,212,170,0.28);}
+.sw{background:rgba(255,107,53,0.07);border-color:rgba(255,107,53,0.28);}
+.sd{background:rgba(255,77,109,0.07);border-color:rgba(255,77,109,0.28);}
+.si{background:rgba(0,132,255,0.07);border-color:rgba(0,132,255,0.28);}
+.sbar-icon{font-size:1.2rem;line-height:1;}
+.sbar-txt{font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;line-height:1.3;}
+
+.dgrid{display:grid;grid-template-columns:1fr 1fr;gap:0.7rem;}
+.dc{background:rgba(255,255,255,0.025);border:1px solid var(--border);border-radius:8px;padding:10px 12px;}
+.dc-lbl{font-family:'IBM Plex Mono',monospace;font-size:0.54rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px;}
+.dc-val{font-family:'Syne',sans-serif;font-weight:700;font-size:0.9rem;}
+
+.msec{background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:10px;padding:14px;}
+.msec-ttl{font-family:'IBM Plex Mono',monospace;font-size:0.57rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px;}
+.mrow{margin-bottom:8px;}
+.mrow:last-child{margin-bottom:0;}
+.mlabel{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+.mlabel span:first-child{font-size:0.74rem;color:var(--muted);}
+.mlabel span:last-child{font-family:'IBM Plex Mono',monospace;font-size:0.63rem;color:var(--text);}
+.mbar{height:5px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;}
+.mfill{height:100%;border-radius:3px;transition:width 0.9s cubic-bezier(0.22,1,0.36,1);}
+
+.csec{background:rgba(255,255,255,0.02);border:1px solid var(--border);border-radius:10px;padding:14px;}
+.csec-ttl{font-family:'IBM Plex Mono',monospace;font-size:0.57rem;color:var(--muted);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:10px;}
+.clist{display:flex;flex-direction:column;gap:6px;}
+.citem{display:flex;align-items:flex-start;gap:8px;font-size:0.77rem;color:var(--muted);line-height:1.4;}
+.citem::before{content:'›';color:var(--accent);font-size:1rem;line-height:1.2;flex-shrink:0;}
+
+.rsec{background:rgba(0,212,170,0.04);border:1px solid rgba(0,212,170,0.15);border-radius:10px;padding:14px;}
+.rsec-ttl{font-family:'IBM Plex Mono',monospace;font-size:0.57rem;color:var(--accent);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;}
+.rsec-txt{font-size:0.78rem;color:var(--muted);line-height:1.6;}
+
+footer{position:relative;z-index:10;text-align:center;padding:2rem 1rem 1.5rem;font-family:'IBM Plex Mono',monospace;font-size:0.62rem;color:var(--muted);border-top:1px solid var(--border);margin-top:2rem;}
+
+@media(max-width:480px){
+  .top-bar{padding:0.8rem 1rem;}
+  .nav-btn{padding:5px 9px;font-size:0.76rem;}
+  .hero-title{font-size:2rem;}
+}
+</style>
+</head>
+<body>
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="orb orb3"></div>
+
+<nav class="top-bar">
+  <div class="top-logo" onclick="go('home')">
+    <div class="logo-icon">SO</div>
+    <div class="logo-name"><span>Sat</span>Orbit</div>
+  </div>
+  <div class="nav-links">
+    <button class="nav-btn active" id="nb-home" onclick="go('home')">Home</button>
+    <button class="nav-btn" id="nb-about" onclick="go('about')">Orbit Guide</button>
+    <button class="nav-btn" id="nb-analyzer" onclick="go('analyzer')">Analyzer</button>
+  </div>
+  <div class="live-ind"><div class="live-dot"></div>LIVE</div>
+</nav>
+
+<!-- HOME -->
+<section class="screen active" id="s-home">
+  <div class="hero">
+    <div class="hero-badge">🛰 Orbital Intelligence Platform · v2.0</div>
+    <h1 class="hero-title">Analyze Satellite<br><span class="hl">Orbit & Mission</span><br>Suitability</h1>
+    <p class="hero-sub">Determine the optimal orbital regime for your satellite mission. Input altitude and mission type to receive a detailed suitability report with real orbital mechanics.</p>
+    <div class="hero-btns">
+      <button class="btn-primary" onclick="go('analyzer')">Launch Analyzer <span>→</span></button>
+      <button class="btn-secondary" onclick="go('about')">📖 Orbit Guide</button>
+    </div>
+    <div class="od-wrap">
+      <div class="od-ring od-r4"></div>
+      <div class="od-ring od-r3"></div>
+      <div class="od-ring od-r2"></div>
+      <div class="od-ring od-r1"></div>
+      <div class="od-earth"></div>
+      <div class="sa sa1"><div class="sdot"></div></div>
+      <div class="sa sa2"><div class="sdot"></div></div>
+      <div class="sa sa3"><div class="sdot"></div></div>
+      <div class="od-lbl ll1">LEO</div>
+      <div class="od-lbl ll2">MEO</div>
+      <div class="od-lbl ll3">GEO</div>
+      <div class="od-lbl ll4">HEO+</div>
+    </div>
+  </div>
+  <div class="home-stats">
+    <div class="hstat"><div class="hstat-num">4</div><div class="hstat-lbl">Orbit Regimes</div></div>
+    <div class="hstat"><div class="hstat-num">3</div><div class="hstat-lbl">Mission Types</div></div>
+    <div class="hstat"><div class="hstat-num">35,786<br><span style="font-size:0.85rem">km</span></div><div class="hstat-lbl">GEO Altitude</div></div>
+    <div class="hstat"><div class="hstat-num">7.9<br><span style="font-size:0.85rem">km/s</span></div><div class="hstat-lbl">LEO Velocity</div></div>
+  </div>
+</section>
+
+<!-- ORBIT GUIDE -->
+<section class="screen" id="s-about">
+  <div class="about-wrap">
+    <div class="page-hdr">
+      <div class="page-tag">Orbit Reference</div>
+      <h2 class="page-title">Orbital Regimes Explained</h2>
+      <p class="page-sub">A reference guide to the four primary orbital bands — their physical properties, radiation environment, and ideal mission types.</p>
+    </div>
+    <div class="about-grid">
+      <div class="acard full">
+        <div class="ac-title" style="margin-bottom:1rem;">📊 Orbit Comparison</div>
+        <table class="otable">
+          <thead><tr><th>Regime</th><th>Altitude</th><th>Period</th><th>Velocity</th><th>Primary Mission</th><th>Real Examples</th></tr></thead>
+          <tbody>
+            <tr><td><span class="badge bl">LEO</span></td><td>160 – 2,000 km</td><td>90 – 127 min</td><td>7.4 – 7.9 km/s</td><td>Imaging, ISS, Remote Sensing</td><td>Starlink, Hubble, ISS</td></tr>
+            <tr><td><span class="badge bm">MEO</span></td><td>2,000 – 35,780 km</td><td>2 – 24 hrs</td><td>3.9 – 5.6 km/s</td><td>Navigation / GNSS</td><td>GPS, GLONASS, Galileo</td></tr>
+            <tr><td><span class="badge bg">GEO</span></td><td>~35,786 km</td><td>~24 hrs</td><td>3.07 km/s</td><td>Communications, Weather</td><td>GOES, Intelsat, DirecTV</td></tr>
+            <tr><td><span class="badge bh">HEO+</span></td><td>&gt; 35,790 km</td><td>&gt; 24 hrs</td><td>&lt; 3.07 km/s</td><td>Deep Space, Research</td><td>JWST, Chandra, Voyager</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="acard">
+        <div class="ac-icon">🌍</div>
+        <div class="ac-title">Low Earth Orbit (LEO)</div>
+        <div class="ac-text">160–2,000 km altitude. Strong signal, low latency (~20–40 ms). High ground coverage pass rate — a revisit can occur every 90 minutes. Atmospheric drag causes gradual orbital decay, requiring periodic reboosts. Optimal for imaging due to proximity; high-resolution satellites like WorldView-3 operate at ~617 km.</div>
+      </div>
+      <div class="acard">
+        <div class="ac-icon">🧭</div>
+        <div class="ac-title">Medium Earth Orbit (MEO)</div>
+        <div class="ac-text">2,000–35,780 km. Home of global navigation constellations (GPS at 20,200 km, GLONASS at 19,100 km, Galileo at 23,222 km). Medium latency (~70–150 ms), wide coverage footprint. Sits partially in the Van Allen radiation belts — hardened electronics required.</div>
+      </div>
+      <div class="acard">
+        <div class="ac-icon">📡</div>
+        <div class="ac-title">Geostationary Orbit (GEO)</div>
+        <div class="ac-text">~35,786 km. Satellite appears stationary over a fixed equatorial point — no ground tracking antennas needed. One satellite covers ~42% of Earth. High latency (~600 ms round-trip). Workhorse of broadcast TV, weather monitoring (GOES), and point-to-point communications.</div>
+      </div>
+      <div class="acard">
+        <div class="ac-icon">🚀</div>
+        <div class="ac-title">HEO & Deep Space</div>
+        <div class="ac-text">Highly Elliptical Orbits (Molniya, 63.4° inclination) give extended dwell time over polar regions. Beyond GEO: Lagrange point missions (JWST at L2, ~1.5M km), interplanetary trajectories, and graveyard orbits. Extreme link budgets and unique gravitational dynamics required.</div>
+      </div>
+      <div class="acard full">
+        <div class="ac-icon">⚠️</div>
+        <div class="ac-title">Altitude Constraints & Mission Matching</div>
+        <div class="ac-text" style="columns:2;column-gap:2rem;line-height:1.8;">
+          <strong style="color:var(--text)">Below 160 km:</strong> Residual atmospheric drag causes decay in days — not viable without continuous thrust.<br><br>
+          <strong style="color:var(--text)">Imaging:</strong> Proximity is resolution. LEO (300–800 km) is standard; every additional km of altitude reduces ground sample distance.<br><br>
+          <strong style="color:var(--text)">Navigation:</strong> MEO offers the ideal trade-off — wide coverage footprint with adequate signal strength for sub-meter accuracy with 4+ satellites.<br><br>
+          <strong style="color:var(--text)">Communications:</strong> GEO provides 24/7 fixed-point coverage. LEO constellations (Starlink) achieve lower latency but require complex handover and many more satellites.
+        </div>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:2rem;">
+      <button class="btn-primary" onclick="go('analyzer')">Open Analyzer →</button>
+    </div>
+  </div>
+</section>
+
+<!-- ANALYZER -->
+<section class="screen" id="s-analyzer">
+  <div class="az-wrap">
+    <div class="page-hdr">
+      <div class="page-tag">Mission Analysis</div>
+      <h2 class="page-title">Orbit & Mission Suitability Analyzer</h2>
+      <p class="page-sub">Configure parameters and generate a detailed suitability report with orbital mechanics data.</p>
+    </div>
+    <div class="az-grid">
+      <div class="panel">
+        <div class="panel-title">Mission Parameters</div>
+        <div class="panel-sub">Adjust altitude and select mission type to evaluate orbital suitability.</div>
+
+        <div style="margin-bottom:1.3rem;">
+          <div class="range-lbl"><span>Altitude</span><span id="altDisp">500 km</span></div>
+          <input type="range" id="altSlider" min="0" max="50000" value="500" step="10" oninput="syncAlt(this.value)" style="--pct:1%"/>
+          <div class="rticks"><span>0</span><span>2,000</span><span>10,000</span><span>35,786</span><span>50,000+</span></div>
+        </div>
+
+        <div class="field">
+          <label>Precise Altitude (km)</label>
+          <input type="number" id="altIn" value="500" min="0" max="999999" placeholder="e.g. 500" oninput="syncIn(this.value)"/>
+        </div>
+
+        <div class="field">
+          <label>Quick Orbit Presets</label>
+          <div class="qbtns">
+            <button class="qbtn ql" onclick="setAlt(550)">LEO · 550</button>
+            <button class="qbtn qm" onclick="setAlt(20200)">GPS · 20,200</button>
+            <button class="qbtn qg" onclick="setAlt(35786)">GEO · 35,786</button>
+            <button class="qbtn qh" onclick="setAlt(40000)">HEO · 40,000</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Mission Type</label>
+          <select id="missIn">
+            <option value="Imaging">🌍 Imaging / Earth Observation</option>
+            <option value="Navigation">🧭 Navigation / GNSS</option>
+            <option value="Comms">📡 Communications</option>
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Satellite Mass Class</label>
+          <select id="massIn">
+            <option value="CubeSat">CubeSat (1–10 kg)</option>
+            <option value="SmallSat">SmallSat (10–100 kg)</option>
+            <option value="MediumSat" selected>Medium (100–1,000 kg)</option>
+            <option value="LargeSat">Large (1,000–5,000 kg)</option>
+          </select>
+        </div>
+
+        <button class="analyze-btn" onclick="analyze()">⚡ Analyze Suitability</button>
+      </div>
+
+      <div class="result-panel" id="rPanel">
+        <div class="r-idle" id="rIdle">
+          <div class="r-idle-icon">🛰️</div>
+          <div class="r-idle-txt">Set parameters<br>and click Analyze<br>to generate your report</div>
+        </div>
+        <div class="r-out" id="rOut"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>v2.0.0 · SatOrbit · Satellite Orbit & Mission Suitability Analyzer</footer>
+
+<script>
+function go(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('s-'+id).classList.add('active');
+  document.getElementById('nb-'+id).classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function syncAlt(v){
+  v=parseFloat(v);
+  document.getElementById('altIn').value=v;
+  document.getElementById('altDisp').textContent=v.toLocaleString()+' km';
+  document.getElementById('altSlider').style.setProperty('--pct',(v/50000*100)+'%');
+}
+function syncIn(v){
+  v=parseFloat(v)||0;
+  const capped=Math.min(v,50000);
+  document.getElementById('altSlider').value=capped;
+  document.getElementById('altDisp').textContent=v.toLocaleString()+' km';
+  document.getElementById('altSlider').style.setProperty('--pct',(capped/50000*100)+'%');
+}
+function setAlt(v){
+  document.getElementById('altIn').value=v;
+  syncIn(v);
+}
+
+const OD={
+  LEO:{name:'Low Earth Orbit',s:'LEO',c:'#00d4aa',cr:'0,212,170',range:'160 – 2,000 km',period:'90 – 127 min',vel:'7.4 – 7.9 km/s',opt:'Imaging',chars:['High ground resolution ideal for optical imaging','Low signal latency (~20–40 ms roundtrip)','Atmospheric drag requires periodic reboost maneuvers','Multiple daily revisit passes per ground station','Lowest radiation dose of all operational orbits'],missions:['Sentinel-2 Earth Observation (786 km)','International Space Station (400 km)','Starlink broadband constellation (550 km)'],suit:{Imaging:100,Navigation:35,Comms:55}},
+  MEO:{name:'Medium Earth Orbit',s:'MEO',c:'#0084ff',cr:'0,132,255',range:'2,000 – 35,780 km',period:'2 – 24 hrs',vel:'3.9 – 5.6 km/s',opt:'Navigation',chars:['Wide ground coverage footprint per satellite (~10,000 km)','Ideal geometry for global GNSS triangulation','Partially within Van Allen radiation belts — hardening needed','Medium signal latency (~70–150 ms one-way)','6–8 satellites can provide global navigation coverage'],missions:['GPS Block III (20,200 km)','Galileo FOC (23,222 km)','GLONASS-M (19,100 km)'],suit:{Imaging:20,Navigation:100,Comms:45}},
+  GEO:{name:'Geostationary Orbit',s:'GEO',c:'#ffb300',cr:'255,179,0',range:'~35,786 km',period:'~24 hrs (synchronous)',vel:'3.07 km/s',opt:'Comms',chars:['Appears stationary — fixed-point ground antennas work','~42% of Earth surface per satellite','High signal latency (~240 ms one-way, ~600 ms roundtrip)','Three satellites achieve near-global coverage (excl. poles)','Crowded spectrum; ITU slot coordination required'],missions:['GOES-18 weather satellite (35,786 km)','Intelsat 39 comms (35,786 km)','DirecTV broadcasting fleet'],suit:{Imaging:15,Navigation:30,Comms:100}},
+  HEO:{name:'Highly Elliptical / Deep Space',s:'HEO+',c:'#ff6b35',cr:'255,107,53',range:'> 35,790 km',period:'> 24 hrs',vel:'< 3.07 km/s',opt:'Research',chars:['Extended dwell time over high-latitude regions (Molniya)','Very large link budgets required for communications','Radiation environment varies dramatically along orbit','Highly specialized — no standard mission template','Unique gravitational dynamics; complex maneuver planning'],missions:['JWST at L2 (~1,500,000 km)','Chandra X-Ray Observatory (HEO)','Molniya Russian comms satellites'],suit:{Imaging:10,Navigation:10,Comms:25}}
+};
+
+function orbKey(alt){
+  if(alt<160)return 'DANGER';
+  if(alt<=2000)return 'LEO';
+  if(alt<35780)return 'MEO';
+  if(alt<=35790)return 'GEO';
+  return 'HEO';
+}
+function T(alt){const a=6371+alt,v=2*Math.PI*Math.sqrt(Math.pow(a,3)/398600)/60;return v<60?v.toFixed(0)+' min':v<1440?(v/60).toFixed(1)+' hrs':(v/1440).toFixed(1)+' days';}
+function V(alt){return Math.sqrt(398600/(6371+alt)).toFixed(2)+' km/s';}
+function Ve(alt){return Math.sqrt(2*398600/(6371+alt)).toFixed(2)+' km/s';}
+function Lat(alt){return Math.round((alt/36000)*100)+'%';}
+
+function analyze(){
+  const alt=parseFloat(document.getElementById('altIn').value)||0;
+  const miss=document.getElementById('missIn').value;
+  const mass=document.getElementById('massIn').value;
+  const ok=orbKey(alt);
+
+  document.getElementById('rIdle').style.display='none';
+  const out=document.getElementById('rOut');
+  out.style.display='flex';
+  out.innerHTML='';
+
+  if(ok==='DANGER'){
+    out.innerHTML=`
+      <div class="sbar sd"><div class="sbar-icon">🚫</div><div class="sbar-txt">Altitude Too Low — Rapid Orbital Decay</div></div>
+      <div class="csec"><div class="csec-ttl">Why This Fails</div><div class="clist">
+        <div class="citem">Below 160 km, residual atmospheric drag causes orbital decay within hours to days.</div>
+        <div class="citem">Aerodynamic heating becomes significant at these altitudes — thermal protection required.</div>
+        <div class="citem">Continuous propulsion would be needed to maintain orbit — not practical for any mission.</div>
+        <div class="citem">Minimum viable sustained LEO altitude: ~160 km (200+ km recommended).</div>
+      </div></div>
+      <div class="rsec"><div class="rsec-ttl">Recommendation</div><div class="rsec-txt">Raise altitude to at least <strong style="color:var(--accent)">200 km</strong> for stable orbit. Most operational LEO missions target 400–800 km for the optimal drag-vs-coverage trade-off.</div></div>`;
+    return;
+  }
+
+  const od=OD[ok];
+  const suit=od.suit[miss]??20;
+  const isOpt=od.opt===miss;
+  let sc,si,st;
+  if(isOpt){sc='ss';si='✅';st=`Suitable — ${miss} is well-matched to ${od.s} operations.`;}
+  else if(suit>=40){sc='si';si='⚠️';st=`Marginal — ${miss} is possible in ${od.s} but with trade-offs.`;}
+  else{sc='sw';si='❌';st=`Not Optimal — ${od.s} is best for ${od.opt}. ${miss} faces significant challenges here.`;}
+
+  const optName=Object.keys(OD).find(k=>OD[k].opt===miss);
+
+  out.innerHTML=`
+    <div class="sbar ${sc}"><div class="sbar-icon">${si}</div><div class="sbar-txt">${st}</div></div>
+    <div class="dgrid">
+      <div class="dc"><div class="dc-lbl">Orbit Regime</div><div class="dc-val" style="color:${od.c}">${od.s}</div></div>
+      <div class="dc"><div class="dc-lbl">Altitude</div><div class="dc-val">${parseFloat(alt).toLocaleString()} km</div></div>
+      <div class="dc"><div class="dc-lbl">Orbital Period</div><div class="dc-val">${T(alt)}</div></div>
+      <div class="dc"><div class="dc-lbl">Orbital Velocity</div><div class="dc-val">${V(alt)}</div></div>
+      <div class="dc"><div class="dc-lbl">Escape Velocity</div><div class="dc-val">${Ve(alt)}</div></div>
+      <div class="dc"><div class="dc-lbl">Mass Class</div><div class="dc-val">${mass}</div></div>
+    </div>
+    <div class="msec">
+      <div class="msec-ttl">Mission Suitability Scores for ${od.s}</div>
+      <div class="mrow"><div class="mlabel"><span>🌍 Imaging</span><span>${od.suit.Imaging}%</span></div><div class="mbar"><div class="mfill" style="width:0%;background:#00d4aa" data-t="${od.suit.Imaging}"></div></div></div>
+      <div class="mrow"><div class="mlabel"><span>🧭 Navigation</span><span>${od.suit.Navigation}%</span></div><div class="mbar"><div class="mfill" style="width:0%;background:#0084ff" data-t="${od.suit.Navigation}"></div></div></div>
+      <div class="mrow"><div class="mlabel"><span>📡 Communications</span><span>${od.suit.Comms}%</span></div><div class="mbar"><div class="mfill" style="width:0%;background:#ffb300" data-t="${od.suit.Comms}"></div></div></div>
+    </div>
+    <div class="csec"><div class="csec-ttl">${od.s} Characteristics</div><div class="clist">${od.chars.map(c=>`<div class="citem">${c}</div>`).join('')}</div></div>
+    <div class="csec"><div class="csec-ttl">Known ${od.s} Missions</div><div class="clist">${od.missions.map(m=>`<div class="citem">${m}</div>`).join('')}</div></div>
+    ${isOpt
+      ?`<div class="rsec"><div class="rsec-ttl">Optimal Match</div><div class="rsec-txt">Your orbit is a <strong style="color:var(--accent)">strong match</strong> for ${miss} operations. ${od.s} is the industry standard for this mission type — optimal signal characteristics, coverage, and cost-efficiency.</div></div>`
+      :`<div class="rsec"><div class="rsec-ttl">Recommendation</div><div class="rsec-txt">For <strong style="color:var(--text)">${miss}</strong> missions, the standard orbit is <strong style="color:var(--accent)">${optName?OD[optName].s:'a different regime'}</strong>. Adjusting your altitude will significantly improve mission performance, coverage, and system design simplicity.</div></div>`
+    }`;
+
+  setTimeout(()=>{document.querySelectorAll('.mfill').forEach(e=>{e.style.width=e.dataset.t+'%';});},80);
+}
+
+syncAlt(500);
+</script>
+</body>
+</html>
